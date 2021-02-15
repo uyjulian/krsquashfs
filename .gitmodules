@@ -1,0 +1,9 @@
+[submodule "external/libsquash"]
+	path = external/libsquash
+	url = https://github.com/pmq20/libsquash.git
+[submodule "external/ncbind"]
+	path = external/ncbind
+	url = ../ncbind
+[submodule "external/zlib"]
+	path = external/zlib
+	url = https://github.com/krkrz/zlib.git
