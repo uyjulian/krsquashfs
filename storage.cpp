@@ -207,6 +207,14 @@ public:
 		fs = in_fs;
 		char buf[(sizeof(void *) * 2) + 1];
 		snprintf(buf, (sizeof(void *) * 2) + 1, "%p", this);
+		// The hash function does not work properly with numbers, so change to letters.
+		char *p = buf;
+		while(*p)
+		{
+			if(*p >= '0' && *p <= '9')
+				*p = 'g' + (*p - '0');
+			p++;
+		}
 		name = ttstr(TJS_W("squashfs")) + buf;
 	}
 
@@ -282,7 +290,7 @@ public:
 		// The domain name needs to be "."
 		if (!TJS_strncmp(ptr, TJS_W("./"), 2))
 		{
-			ptr += 2;
+			ptr += 1;
 			tjs_string wname(ptr);
 			std::string nname;
 			if( TVPUtf16ToUtf8( nname, name.c_str() ) )
@@ -311,7 +319,7 @@ public:
 			// The domain name needs to be "."
 			if (!TJS_strncmp(ptr, TJS_W("./"), 2))
 			{
-				ptr += 2;
+				ptr += 1;
 				ttstr fname;
 				tjs_string wname(ptr);
 				std::string nname;
@@ -342,7 +350,7 @@ public:
 		// The domain name needs to be "."
 		if (!TJS_strncmp(ptr, TJS_W("./"), 2))
 		{
-			ptr += 2;
+			ptr += 1;
 			tjs_string wname(ptr);
 			std::string nname;
 			if( TVPUtf16ToUtf8(nname, wname) )
