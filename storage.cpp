@@ -195,6 +195,8 @@ private:
 	int vfd;
 };
 
+static std::vector<iTVPStorageMedia*> storage_media_vector;
+
 class SquashFsStorage : public iTVPStorageMedia
 {
 
@@ -275,15 +277,23 @@ public:
 	// check file existence
 	virtual bool TJS_INTF_METHOD CheckExistentStorage(const ttstr &name)
 	{
-		std::string filename;
-		if( TVPUtf16ToUtf8( filename, name.c_str() ) )
+		const tjs_char *ptr = name.c_str();
+
+		// The domain name needs to be "."
+		if (!TJS_strncmp(ptr, TJS_W("./"), 2))
 		{
-			struct stat st;
-			if( squash_stat( fs, filename.c_str(), &st) == 0)
+			ptr += 2;
+			tjs_string wname(ptr);
+			std::string nname;
+			if( TVPUtf16ToUtf8( nname, name.c_str() ) )
 			{
-				if( S_ISREG(st.st_mode) )
+				struct stat st;
+				if( squash_stat( fs, nname.c_str(), &st) == 0)
 				{
-					return true;
+					if( S_ISREG(st.st_mode) )
+					{
+						return true;
+					}
 				}
 			}
 		}
@@ -294,21 +304,29 @@ public:
 	// name does not contain in-archive storage name but
 	// is normalized.
 	virtual tTJSBinaryStream * TJS_INTF_METHOD Open(const ttstr & name, tjs_uint32 flags) {
-		if (flags == TJS_BS_READ) {
-			ttstr fname;
-			tjs_string wname(name.c_str());
-			std::string nname;
-			if( TVPUtf16ToUtf8(nname, wname) )
+		if (flags == TJS_BS_READ)
+		{
+			const tjs_char *ptr = name.c_str();
+
+			// The domain name needs to be "."
+			if (!TJS_strncmp(ptr, TJS_W("./"), 2))
 			{
-				int vfd = squash_open(fs, nname.c_str());
-				if (vfd != -1)
+				ptr += 2;
+				ttstr fname;
+				tjs_string wname(ptr);
+				std::string nname;
+				if( TVPUtf16ToUtf8(nname, wname) )
 				{
-					SquashFsStream *stream = new SquashFsStream(vfd);
-					if (stream)
+					int vfd = squash_open(fs, nname.c_str());
+					if (vfd != -1)
 					{
-						tTJSBinaryStream *ret = TVPCreateBinaryStreamAdapter(stream);
-						stream->Release();
-						return ret;
+						SquashFsStream *stream = new SquashFsStream(vfd);
+						if (stream)
+						{
+							tTJSBinaryStream *ret = TVPCreateBinaryStreamAdapter(stream);
+							stream->Release();
+							return ret;
+						}
 					}
 				}
 			}
@@ -319,32 +337,39 @@ public:
 	// list files at given place
 	virtual void TJS_INTF_METHOD GetListAt(const ttstr &name, iTVPStorageLister * lister)
 	{
-		tjs_string wname(name.c_str());
-		std::string nname;
-		if( TVPUtf16ToUtf8(nname, wname) )
+		const tjs_char *ptr = name.c_str();
+
+		// The domain name needs to be "."
+		if (!TJS_strncmp(ptr, TJS_W("./"), 2))
 		{
-			SQUASH_DIR* dr;
-			if( ( dr = squash_opendir(fs, nname.c_str()) ) != nullptr )
+			ptr += 2;
+			tjs_string wname(ptr);
+			std::string nname;
+			if( TVPUtf16ToUtf8(nname, wname) )
 			{
-				struct SQUASH_DIRENT* entry;
-				while( ( entry = squash_readdir( dr ) ) != nullptr )
+				SQUASH_DIR* dr;
+				if( ( dr = squash_opendir(fs, nname.c_str()) ) != nullptr )
 				{
-					if( entry->d_type == DT_REG ) {
-						tjs_char fname[256];
-						tjs_int count = TVPUtf8ToWideCharString( entry->d_name, fname );
-						fname[count] = TJS_W('\0');
-						ttstr file(fname);
-						tjs_char *p = file.Independ();
-						while(*p) {
-							// make all characters small
-							if(*p >= TJS_W('A') && *p <= TJS_W('Z'))
-								*p += TJS_W('a') - TJS_W('A');
-							p++;
+					struct SQUASH_DIRENT* entry;
+					while( ( entry = squash_readdir( dr ) ) != nullptr )
+					{
+						if( entry->d_type == DT_REG ) {
+							tjs_char fname[256];
+							tjs_int count = TVPUtf8ToWideCharString( entry->d_name, fname );
+							fname[count] = TJS_W('\0');
+							ttstr file(fname);
+							tjs_char *p = file.Independ();
+							while(*p) {
+								// make all characters small
+								if(*p >= TJS_W('A') && *p <= TJS_W('Z'))
+									*p += TJS_W('a') - TJS_W('A');
+								p++;
+							}
+							lister->Add(file);
 						}
-						lister->Add(file);
 					}
+					squash_closedir( dr );
 				}
-				squash_closedir( dr );
 			}
 		}
 	}
@@ -373,7 +398,7 @@ public:
 			IStream *in = TVPCreateIStream(filename, TJS_BS_READ);
 			if (!in)
 			{
-				TVPAddLog(TJS_W("krass: could not open ASS file"));
+				TVPAddLog(TJS_W("krsquashfs: could not open squashfs file"));
 				return false;
 			}
 			STATSTG stat;
@@ -391,11 +416,12 @@ public:
 		if (data)
 		{
 			sqfs *sqfs_new = (sqfs *)calloc(sizeof(sqfs), 1);
-			sqfs_err err = sqfs_open_image(sqfs_new, (const uint8_t *)data, size);
+			sqfs_err err = sqfs_open_image(sqfs_new, (const uint8_t *)data, 0);
 			if (err == SQFS_OK)
 			{
 				SquashFsStorage * sfsstorage = new SquashFsStorage(sqfs_new);
 				TVPRegisterStorageMedia(sfsstorage);
+				storage_media_vector.push_back(sfsstorage);
 				ttstr sfsstorage_name;
 				sfsstorage->GetName(sfsstorage_name);
 				return sfsstorage_name;
@@ -415,4 +441,15 @@ static void PreRegistCallback()
 	squash_start();
 }
 
+static void PostUnregistCallback()
+{
+	for (auto i = storage_media_vector.begin();
+		i != storage_media_vector.end(); i += 1)
+	{
+		TVPUnregisterStorageMedia(*i);
+	}
+	squash_halt();
+}
+
 NCB_PRE_REGIST_CALLBACK(PreRegistCallback);
+NCB_POST_UNREGIST_CALLBACK(PostUnregistCallback);
