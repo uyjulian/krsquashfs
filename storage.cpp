@@ -427,7 +427,6 @@ public:
 			in = TVPCreateIStream(filename, TJS_BS_READ);
 			if (!in)
 			{
-				TVPAddLog(TJS_W("krsquashfs: could not open squashfs file"));
 				return TJS_W("");
 			}
 		}
