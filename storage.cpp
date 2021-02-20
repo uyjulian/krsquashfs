@@ -423,17 +423,53 @@ public:
 	static ttstr mountSquashFs(ttstr filename)
 	{
 		IStream *in = nullptr;
+		size_t offset = 0;
 		{
 			in = TVPCreateIStream(filename, TJS_BS_READ);
 			if (!in)
 			{
 				return TJS_W("");
 			}
+
+			// skip self-embedded exe
+			ULONG size = 0;
+			ULARGE_INTEGER new_pos;
+			HRESULT result;
+			IMAGE_DOS_HEADER dos_header;
+			result = in->Read(&dos_header, sizeof(dos_header), &size);
+			if (result == S_OK && dos_header.e_magic == IMAGE_DOS_SIGNATURE)
+			{
+				result = in->Seek({ dos_header.e_lfanew }, STREAM_SEEK_SET, &new_pos);
+				if (result == S_OK)
+				{
+					IMAGE_NT_HEADERS32 pe_header;
+					result = in->Read(&pe_header, sizeof(pe_header), &size);
+					if (result == S_OK && pe_header.Signature == IMAGE_NT_SIGNATURE)
+					{
+						IMAGE_SECTION_HEADER * sections = new IMAGE_SECTION_HEADER[pe_header.FileHeader.NumberOfSections];
+						result = in->Read(sections, pe_header.FileHeader.NumberOfSections * sizeof(IMAGE_SECTION_HEADER), &size);
+						if (result == S_OK)
+						{
+							DWORD max_pointer = 0;
+							for (int i = 0; i < pe_header.FileHeader.NumberOfSections; i += 1)
+							{
+								if (sections[i].PointerToRawData > max_pointer)
+								{
+									max_pointer = sections[i].PointerToRawData;
+									offset = sections[i].PointerToRawData + sections[i].SizeOfRawData;
+								}
+							}
+						}
+						delete[] sections;
+					}
+				}
+			}
+			in->Seek({ 0 }, STREAM_SEEK_SET, &new_pos);
 		}
 		if (in)
 		{
 			sqfs *sqfs_new = (sqfs *)calloc(sizeof(sqfs), 1);
-			sqfs_err err = sqfs_open_image(sqfs_new, in, 0);
+			sqfs_err err = sqfs_open_image(sqfs_new, in, offset);
 			if (err == SQFS_OK)
 			{
 				SquashFsStorage * sfsstorage = new SquashFsStorage(sqfs_new);
@@ -448,7 +484,6 @@ public:
 				in->Release();
 			}
 		}
-
 		return TJS_W("");
 	}
 
@@ -477,9 +512,51 @@ NCB_ATTACH_CLASS(StoragesSquashFs, Storages) {
 	NCB_METHOD(unmountSquashFs);
 };
 
+
+static HMODULE this_hmodule = NULL;
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD Reason, LPVOID lpReserved)
+{
+	if (Reason == DLL_PROCESS_ATTACH)
+	{
+		this_hmodule = hModule;
+		if (hModule != NULL)
+		{
+			DisableThreadLibraryCalls(hModule);
+		}
+	}
+	return TRUE;
+}
+
+
 static void PreRegistCallback()
 {
 	squash_start();
+}
+
+static void PostRegistCallback()
+{
+	WCHAR* modnamebuf = new WCHAR[32768];
+	if (modnamebuf)
+	{
+		if (this_hmodule)
+		{
+			DWORD ret_len = GetModuleFileNameW(this_hmodule, modnamebuf, 32768);
+			if (ret_len)
+			{
+				ttstr arcname = modnamebuf;
+				ttstr normmodname = TVPNormalizeStorageName(modnamebuf);
+				ttstr mount = StoragesSquashFs::mountSquashFs(normmodname);
+				if (mount != TJS_W(""))
+				{
+					ttstr new_curdir = mount + ttstr(TJS_W("://./"));
+					TVPSetCurrentDirectory(new_curdir);
+					TVPAddImportantLog(TVPFormatMessage(TJS_W("krsquashfs: TVP current directory has been set to %1."), new_curdir));
+				}
+			}
+		}
+		delete[] modnamebuf;
+	}
 }
 
 static void PostUnregistCallback()
@@ -493,4 +570,5 @@ static void PostUnregistCallback()
 }
 
 NCB_PRE_REGIST_CALLBACK(PreRegistCallback);
+NCB_POST_REGIST_CALLBACK(PostRegistCallback);
 NCB_POST_UNREGIST_CALLBACK(PostUnregistCallback);
