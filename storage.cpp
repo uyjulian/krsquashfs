@@ -14,6 +14,22 @@ extern "C"
 #include "tp_stub.h"
 #include "CharacterSet.h"
 
+extern "C" ssize_t sqfs_pread(IStream * file, void *buf, size_t count, sqfs_off_t off)
+{
+	ULARGE_INTEGER new_pos;
+	HRESULT seek_result = file->Seek({ off }, STREAM_SEEK_SET, &new_pos);
+	if (seek_result != S_OK)
+	{
+		return -1;
+	}
+	ULONG size = 0;
+	HRESULT read_result = file->Read(buf, count, &size);
+	if (read_result != S_OK)
+	{
+		return -1;
+	}
+	return size;
+}
 
 class SquashFsStream : public IStream {
 
@@ -220,7 +236,12 @@ public:
 
 	virtual ~SquashFsStorage()
 	{
-		// For now, we are going to leak memory
+		if (fs)
+		{
+			sqfs_destroy(fs);
+			fs->fd->Release();
+			fs = NULL;
+		}
 	}
 
 public:
@@ -399,32 +420,21 @@ private:
 class StoragesSquashFs {
 
 public:
-	static ttstr mountSquashFs(ttstr filename) {
-		char *data = nullptr;
-		ULONG size = 0;
+	static ttstr mountSquashFs(ttstr filename)
+	{
+		IStream *in = nullptr;
 		{
-			IStream *in = TVPCreateIStream(filename, TJS_BS_READ);
+			in = TVPCreateIStream(filename, TJS_BS_READ);
 			if (!in)
 			{
 				TVPAddLog(TJS_W("krsquashfs: could not open squashfs file"));
-				return false;
-			}
-			STATSTG stat;
-			in->Stat(&stat, STATFLAG_NONAME);
-			size = (ULONG)(stat.cbSize.QuadPart);
-			data = new char[size];
-			HRESULT read_result = in->Read(data, size, &size);
-			in->Release();
-			if (read_result != S_OK)
-			{
-				delete[] data;
 				return TJS_W("");
 			}
 		}
-		if (data)
+		if (in)
 		{
 			sqfs *sqfs_new = (sqfs *)calloc(sizeof(sqfs), 1);
-			sqfs_err err = sqfs_open_image(sqfs_new, (const uint8_t *)data, 0);
+			sqfs_err err = sqfs_open_image(sqfs_new, in, 0);
 			if (err == SQFS_OK)
 			{
 				SquashFsStorage * sfsstorage = new SquashFsStorage(sqfs_new);
@@ -434,14 +444,38 @@ public:
 				sfsstorage->GetName(sfsstorage_name);
 				return sfsstorage_name;
 			}
+			else
+			{
+				in->Release();
+			}
 		}
 
 		return TJS_W("");
+	}
+
+	static bool unmountSquashFs(ttstr medianame)
+	{
+		for (auto i = storage_media_vector.begin();
+			i != storage_media_vector.end(); i += 1)
+		{
+			ttstr this_medianame;
+			(*i)->GetName(this_medianame);
+			if (medianame == this_medianame)
+			{
+				TVPUnregisterStorageMedia(*i);
+				(*i)->Release();
+				storage_media_vector.erase(i);
+				return true;
+			}
+		}
+
+		return false;
 	}
 };
 
 NCB_ATTACH_CLASS(StoragesSquashFs, Storages) {
 	NCB_METHOD(mountSquashFs);
+	NCB_METHOD(unmountSquashFs);
 };
 
 static void PreRegistCallback()
