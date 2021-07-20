@@ -528,6 +528,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD Reason, LPVOID lpReserved)
 	return TRUE;
 }
 
+#ifdef ENABLE_SELF_LOAD
 static bool RunPE(ttstr path)
 {
 	// PE headers
@@ -691,6 +692,7 @@ static bool RunPE(ttstr path)
     TerminateProcess(GetCurrentProcess(), exitcode);
 	return true;
 }
+#endif
 
 static void PreRegistCallback()
 {
@@ -699,6 +701,7 @@ static void PreRegistCallback()
 
 static void PostRegistCallback()
 {
+#ifdef ENABLE_SELF_LOAD
 	WCHAR* modnamebuf = new WCHAR[32768];
 	if (modnamebuf)
 	{
@@ -747,6 +750,7 @@ static void PostRegistCallback()
 			TVPAddImportantLog(TJS_W("krsquashfs: Did not find plugin/tvpwin32.exe in TVP storage."));
 		}
 	}
+#endif
 }
 
 static void PostUnregistCallback()
