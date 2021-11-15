@@ -1,12 +1,14 @@
 [submodule "external/ncbind"]
 	path = external/ncbind
-	url = ../ncbind
+	url = https://github.com/uyjulian/ncbind.git
 [submodule "external/zlib"]
 	path = external/zlib
 	url = https://github.com/krkrz/zlib.git
+	ignore = dirty
 [submodule "libsquash_"]
 	path = external/libsquash
-	url = ../libsquash
+	url = https://github.com/uyjulian/libsquash.git
+	ignore = dirty
 [submodule "external/zstd"]
 	path = external/zstd
 	url = https://github.com/facebook/zstd.git

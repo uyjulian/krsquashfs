@@ -13,4 +13,6 @@
 *.dll
 *.o
 *.7z
-build-libraries/
+*.dep.make
+build-*/
+
