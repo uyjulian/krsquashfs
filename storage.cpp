@@ -17,7 +17,7 @@ extern "C"
 extern "C" ssize_t sqfs_pread(IStream * file, void *buf, size_t count, sqfs_off_t off)
 {
 	ULARGE_INTEGER new_pos;
-	HRESULT seek_result = file->Seek({ off }, STREAM_SEEK_SET, &new_pos);
+	HRESULT seek_result = file->Seek({ .QuadPart = (LONGLONG)off }, STREAM_SEEK_SET, &new_pos);
 	if (seek_result != S_OK)
 	{
 		return -1;
@@ -439,7 +439,7 @@ public:
 			result = in->Read(&dos_header, sizeof(dos_header), &size);
 			if (result == S_OK && dos_header.e_magic == IMAGE_DOS_SIGNATURE)
 			{
-				result = in->Seek({ dos_header.e_lfanew }, STREAM_SEEK_SET, &new_pos);
+				result = in->Seek({ .QuadPart = dos_header.e_lfanew }, STREAM_SEEK_SET, &new_pos);
 				if (result == S_OK)
 				{
 					IMAGE_NT_HEADERS32 pe_header;
@@ -464,7 +464,7 @@ public:
 					}
 				}
 			}
-			in->Seek({ 0 }, STREAM_SEEK_SET, &new_pos);
+			in->Seek({ .QuadPart = 0 }, STREAM_SEEK_SET, &new_pos);
 		}
 		if (in)
 		{
