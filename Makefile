@@ -18,6 +18,7 @@ DEPENDENCY_OUTPUT_DIRECTORY := $(shell realpath build-libraries)-$(TARGET_ARCH)
 
 EXTLIBS += $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/liblzma.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/liblzo2.a external/lz4/lib/liblz4.a external/zstd/lib/libzstd.a
 SOURCES += $(EXTLIBS)
+OBJECTS += $(EXTLIBS)
 LDLIBS += $(EXTLIBS)
 
 INCFLAGS += -I$(DEPENDENCY_OUTPUT_DIRECTORY)/include
