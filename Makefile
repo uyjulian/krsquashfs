@@ -14,6 +14,17 @@ PROJECT_BASENAME = krsquashfs
 
 include external/ncbind/Rules.lib.make
 
+DEPENDENCY_BUILD_DIRECTORY := build-$(TARGET_ARCH)
+DEPENDENCY_BUILD_DIRECTORY_XZ := $(DEPENDENCY_BUILD_DIRECTORY)/xz
+DEPENDENCY_BUILD_DIRECTORY_LZO := $(DEPENDENCY_BUILD_DIRECTORY)/lzo
+DEPENDENCY_BUILD_DIRECTORY_LZ4 := $(DEPENDENCY_BUILD_DIRECTORY)/lz4
+DEPENDENCY_BUILD_DIRECTORY_ZSTD := $(DEPENDENCY_BUILD_DIRECTORY)/zstd
+
+XZ_PATH := $(realpath external/xz)
+LZO_PATH := $(realpath external/lzo)
+LZ4_PATH := $(realpath external/lz4)
+ZSTD_PATH := $(realpath external/zstd)
+
 DEPENDENCY_OUTPUT_DIRECTORY := $(shell realpath build-libraries)-$(TARGET_ARCH)
 
 EXTLIBS += $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/liblzma.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/liblzo2.a external/lz4/lib/liblz4.a external/zstd/lib/libzstd.a
@@ -26,9 +37,7 @@ INCFLAGS += -I$(DEPENDENCY_OUTPUT_DIRECTORY)/include
 $(BASESOURCES): $(EXTLIBS)
 
 clean::
-	rm -r $(DEPENDENCY_OUTPUT_DIRECTORY)
-	$(MAKE) -C external/xz clean
-	$(MAKE) -C external/lzo clean
+	rm -rf $(DEPENDENCY_BUILD_DIRECTORY) $(DEPENDENCY_OUTPUT_DIRECTORY)
 	$(MAKE) -C external/lz4 clean
 	$(MAKE) -C external/zstd clean
 
@@ -41,9 +50,10 @@ external/xz/configure:
 	NOCONFIGURE=1 ./autogen.sh
 
 $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/liblzma.a: $(DEPENDENCY_OUTPUT_DIRECTORY) external/xz/configure
-	cd external/xz && \
+	mkdir -p $(DEPENDENCY_BUILD_DIRECTORY_XZ) && \
+	cd $(DEPENDENCY_BUILD_DIRECTORY_XZ) && \
 	PKG_CONFIG_PATH=$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/pkgconfig \
-	./configure \
+	$(XZ_PATH)/configure \
 		CFLAGS="-O2" \
 		--prefix="$(DEPENDENCY_OUTPUT_DIRECTORY)" \
 		--enable-threads=no \
@@ -62,9 +72,10 @@ $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/liblzma.a: $(DEPENDENCY_OUTPUT_DIRECTORY) ext
 	$(MAKE) install
 
 $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/liblzo2.a: $(DEPENDENCY_OUTPUT_DIRECTORY)
-	cd external/lzo && \
+	mkdir -p $(DEPENDENCY_BUILD_DIRECTORY_LZO) && \
+	cd $(DEPENDENCY_BUILD_DIRECTORY_LZO) && \
 	PKG_CONFIG_PATH=$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/pkgconfig \
-	./configure \
+	$(LZO_PATH)/configure \
 		CFLAGS="-O2" \
 		--prefix="$(DEPENDENCY_OUTPUT_DIRECTORY)" \
 		--enable-shared=no \
