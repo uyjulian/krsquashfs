@@ -21,3 +21,6 @@
 	path = external/lzo
 	url = https://github.com/uyjulian/lzo.git
 	ignore = dirty
+[submodule "external/zlib"]
+	path = external/zlib
+	url = https://github.com/madler/zlib.git

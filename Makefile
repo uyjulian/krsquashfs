@@ -1,10 +1,8 @@
 
-SOURCES += external/zlib/adler32.c external/zlib/compress.c external/zlib/crc32.c external/zlib/deflate.c external/zlib/gzclose.c external/zlib/gzlib.c external/zlib/gzread.c external/zlib/gzwrite.c external/zlib/infback.c external/zlib/inffast.c external/zlib/inflate.c external/zlib/inftrees.c external/zlib/trees.c external/zlib/uncompr.c external/zlib/zutil.c
 BASESOURCES += storage.cpp CharacterSet.cpp
 BASESOURCES += external/libsquash/src/cache.c external/libsquash/src/decompress.c external/libsquash/src/dir.c external/libsquash/src/dirent.c external/libsquash/src/fd.c external/libsquash/src/file.c external/libsquash/src/fs.c external/libsquash/src/hash.c external/libsquash/src/mutex.c external/libsquash/src/nonstd-makedev.c external/libsquash/src/nonstd-stat.c external/libsquash/src/private.c external/libsquash/src/readlink.c external/libsquash/src/scandir.c external/libsquash/src/stack.c external/libsquash/src/stat.c external/libsquash/src/table.c external/libsquash/src/traverse.c external/libsquash/src/util.c
 SOURCES += $(BASESOURCES)
 
-INCFLAGS += -Iexternal/zlib
 INCFLAGS += -Iexternal/lz4/lib
 INCFLAGS += -Iexternal/zstd/lib
 INCFLAGS += -Iexternal/libsquash/include
@@ -15,11 +13,13 @@ PROJECT_BASENAME = krsquashfs
 include external/ncbind/Rules.lib.make
 
 DEPENDENCY_BUILD_DIRECTORY := build-$(TARGET_ARCH)
+DEPENDENCY_BUILD_DIRECTORY_ZLIB := $(DEPENDENCY_BUILD_DIRECTORY)/zlib
 DEPENDENCY_BUILD_DIRECTORY_XZ := $(DEPENDENCY_BUILD_DIRECTORY)/xz
 DEPENDENCY_BUILD_DIRECTORY_LZO := $(DEPENDENCY_BUILD_DIRECTORY)/lzo
 DEPENDENCY_BUILD_DIRECTORY_LZ4 := $(DEPENDENCY_BUILD_DIRECTORY)/lz4
 DEPENDENCY_BUILD_DIRECTORY_ZSTD := $(DEPENDENCY_BUILD_DIRECTORY)/zstd
 
+ZLIB_PATH := $(realpath external/zlib)
 XZ_PATH := $(realpath external/xz)
 LZO_PATH := $(realpath external/lzo)
 LZ4_PATH := $(realpath external/lz4)
@@ -27,7 +27,7 @@ ZSTD_PATH := $(realpath external/zstd)
 
 DEPENDENCY_OUTPUT_DIRECTORY := $(shell realpath build-libraries)-$(TARGET_ARCH)
 
-EXTLIBS += $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/liblzma.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/liblzo2.a external/lz4/lib/liblz4.a external/zstd/lib/libzstd.a
+EXTLIBS += $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libz.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/liblzma.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/liblzo2.a external/lz4/lib/liblz4.a external/zstd/lib/libzstd.a
 SOURCES += $(EXTLIBS)
 OBJECTS += $(EXTLIBS)
 LDLIBS += $(EXTLIBS)
@@ -43,6 +43,19 @@ clean::
 
 $(DEPENDENCY_OUTPUT_DIRECTORY):
 	mkdir -p $(DEPENDENCY_OUTPUT_DIRECTORY)
+
+$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libz.a: $(DEPENDENCY_OUTPUT_DIRECTORY)
+	mkdir -p $(DEPENDENCY_BUILD_DIRECTORY_ZLIB) && \
+	cd $(DEPENDENCY_BUILD_DIRECTORY_ZLIB) && \
+	PKG_CONFIG_PATH=$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/pkgconfig \
+	CFLAGS="-O2" \
+	CROSS_PREFIX="$(TOOL_TRIPLET_PREFIX)" \
+	$(ZLIB_PATH)/configure \
+		--prefix="$(DEPENDENCY_OUTPUT_DIRECTORY)" \
+		--static \
+	&& \
+	$(MAKE) && \
+	$(MAKE) install
 
 external/xz/configure:
 	cd external/xz && \
