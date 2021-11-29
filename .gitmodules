@@ -5,22 +5,3 @@
 	path = external/libsquash
 	url = https://github.com/uyjulian/libsquash.git
 	ignore = dirty
-[submodule "external/zstd"]
-	path = external/zstd
-	url = https://github.com/facebook/zstd.git
-	ignore = dirty
-[submodule "external/lz4"]
-	path = external/lz4
-	url = https://github.com/lz4/lz4.git
-	ignore = dirty
-[submodule "external/xz"]
-	path = external/xz
-	url = https://git.tukaani.org/xz.git
-	ignore = dirty
-[submodule "external/lzo"]
-	path = external/lzo
-	url = https://github.com/uyjulian/lzo.git
-	ignore = dirty
-[submodule "external/zlib"]
-	path = external/zlib
-	url = https://github.com/madler/zlib.git
