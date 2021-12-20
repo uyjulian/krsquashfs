@@ -514,22 +514,6 @@ NCB_ATTACH_CLASS(StoragesSquashFs, Storages) {
 	NCB_METHOD(unmountSquashFs);
 };
 
-
-static HMODULE this_hmodule = NULL;
-
-BOOL APIENTRY DllMain(HMODULE hModule, DWORD Reason, LPVOID lpReserved)
-{
-	if (Reason == DLL_PROCESS_ATTACH)
-	{
-		this_hmodule = hModule;
-		if (hModule != NULL)
-		{
-			DisableThreadLibraryCalls(hModule);
-		}
-	}
-	return TRUE;
-}
-
 #ifdef ENABLE_SELF_LOAD
 static bool RunPE(ttstr path)
 {
@@ -707,9 +691,9 @@ static void PostRegistCallback()
 	WCHAR* modnamebuf = new WCHAR[32768];
 	if (modnamebuf)
 	{
-		if (this_hmodule)
+		if (DllHandle)
 		{
-			DWORD ret_len = GetModuleFileNameW(this_hmodule, modnamebuf, 32768);
+			DWORD ret_len = GetModuleFileNameW(DllHandle, modnamebuf, 32768);
 			if (ret_len)
 			{
 				ttstr arcname = modnamebuf;
