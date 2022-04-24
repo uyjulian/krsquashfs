@@ -24,7 +24,7 @@ DEPENDENCY_SOURCE_FILE_LZO := $(DEPENDENCY_SOURCE_DIRECTORY)/lzo.tar.gz
 DEPENDENCY_SOURCE_FILE_LZ4 := $(DEPENDENCY_SOURCE_DIRECTORY)/lz4.tar.gz
 DEPENDENCY_SOURCE_FILE_ZSTD := $(DEPENDENCY_SOURCE_DIRECTORY)/zstd.tar.gz
 
-DEPENDENCY_SOURCE_URL_ZLIB := https://zlib.net/zlib-1.2.11.tar.xz
+DEPENDENCY_SOURCE_URL_ZLIB := https://downloads.sourceforge.net/project/libpng/zlib/1.2.11/zlib-1.2.11.tar.gz
 DEPENDENCY_SOURCE_URL_XZ := https://tukaani.org/xz/xz-5.2.5.tar.xz
 DEPENDENCY_SOURCE_URL_LZO := https://www.oberhumer.com/opensource/lzo/download/lzo-2.10.tar.gz
 DEPENDENCY_SOURCE_URL_LZ4 := https://github.com/lz4/lz4/archive/refs/tags/v1.9.3.tar.gz
