@@ -112,9 +112,10 @@ $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/liblzma.a: | $(DEPENDENCY_SOURCE_DIRECTORY_XZ
 	cd $(DEPENDENCY_BUILD_DIRECTORY_XZ) && \
 	PKG_CONFIG_PATH=$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/pkgconfig \
 	$(DEPENDENCY_SOURCE_DIRECTORY_XZ)/configure \
-		CFLAGS="-O2 -U_M_X64" \
+		CFLAGS="-O2" \
 		--prefix="$(DEPENDENCY_OUTPUT_DIRECTORY)" \
 		--enable-threads=no \
+		--enable-unaligned-access=no \
 		--disable-xz \
 		--disable-xzdec \
 		--disable-lzmadec \
