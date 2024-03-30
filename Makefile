@@ -11,29 +11,23 @@ PROJECT_BASENAME = krsquashfs
 include external/ncbind/Rules.lib.make
 
 DEPENDENCY_SOURCE_DIRECTORY_ZLIB := $(DEPENDENCY_SOURCE_DIRECTORY)/zlib
-DEPENDENCY_SOURCE_DIRECTORY_XZ := $(DEPENDENCY_SOURCE_DIRECTORY)/xz
 DEPENDENCY_SOURCE_DIRECTORY_LZO := $(DEPENDENCY_SOURCE_DIRECTORY)/lzo
 # Since the LZ4 and Zstandard build systems don't support out of tree builds, we'll just use separate paths per arch instead
 DEPENDENCY_SOURCE_DIRECTORY_LZ4 := $(DEPENDENCY_SOURCE_DIRECTORY)/lz4-$(TARGET_ARCH)
 DEPENDENCY_SOURCE_DIRECTORY_ZSTD := $(DEPENDENCY_SOURCE_DIRECTORY)/zstd-$(TARGET_ARCH)
 
 DEPENDENCY_SOURCE_FILE_ZLIB := $(DEPENDENCY_SOURCE_DIRECTORY)/zlib.tar.xz
-DEPENDENCY_SOURCE_FILE_XZ := $(DEPENDENCY_SOURCE_DIRECTORY)/xz.tar.xz
 DEPENDENCY_SOURCE_FILE_LZO := $(DEPENDENCY_SOURCE_DIRECTORY)/lzo.tar.gz
 DEPENDENCY_SOURCE_FILE_LZ4 := $(DEPENDENCY_SOURCE_DIRECTORY)/lz4.tar.gz
 DEPENDENCY_SOURCE_FILE_ZSTD := $(DEPENDENCY_SOURCE_DIRECTORY)/zstd.tar.gz
 
 DEPENDENCY_SOURCE_URL_ZLIB := https://github.com/madler/zlib/archive/refs/tags/v1.2.12.tar.gz
-DEPENDENCY_SOURCE_URL_XZ := https://tukaani.org/xz/xz-5.2.6.tar.xz
 DEPENDENCY_SOURCE_URL_LZO := https://www.oberhumer.com/opensource/lzo/download/lzo-2.10.tar.gz
 DEPENDENCY_SOURCE_URL_LZ4 := https://github.com/lz4/lz4/archive/refs/tags/v1.9.4.tar.gz
 DEPENDENCY_SOURCE_URL_ZSTD := https://github.com/facebook/zstd/releases/download/v1.5.2/zstd-1.5.2.tar.gz
 
 $(DEPENDENCY_SOURCE_FILE_ZLIB): | $(DEPENDENCY_SOURCE_DIRECTORY)
 	curl --location --output $@ $(DEPENDENCY_SOURCE_URL_ZLIB)
-
-$(DEPENDENCY_SOURCE_FILE_XZ): | $(DEPENDENCY_SOURCE_DIRECTORY)
-	curl --location --output $@ $(DEPENDENCY_SOURCE_URL_XZ)
 
 $(DEPENDENCY_SOURCE_FILE_LZO): | $(DEPENDENCY_SOURCE_DIRECTORY)
 	curl --location --output $@ $(DEPENDENCY_SOURCE_URL_LZO)
@@ -45,10 +39,6 @@ $(DEPENDENCY_SOURCE_FILE_ZSTD): | $(DEPENDENCY_SOURCE_DIRECTORY)
 	curl --location --output $@ $(DEPENDENCY_SOURCE_URL_ZSTD)
 
 $(DEPENDENCY_SOURCE_DIRECTORY_ZLIB): $(DEPENDENCY_SOURCE_FILE_ZLIB)
-	mkdir -p $@
-	tar -x -f $< -C $@ --strip-components 1
-
-$(DEPENDENCY_SOURCE_DIRECTORY_XZ): $(DEPENDENCY_SOURCE_FILE_XZ)
 	mkdir -p $@
 	tar -x -f $< -C $@ --strip-components 1
 
@@ -65,12 +55,11 @@ $(DEPENDENCY_SOURCE_DIRECTORY_ZSTD): $(DEPENDENCY_SOURCE_FILE_ZSTD)
 	tar -x -f $< -C $@ --strip-components 1
 
 DEPENDENCY_BUILD_DIRECTORY_ZLIB := $(DEPENDENCY_BUILD_DIRECTORY)/zlib
-DEPENDENCY_BUILD_DIRECTORY_XZ := $(DEPENDENCY_BUILD_DIRECTORY)/xz
 DEPENDENCY_BUILD_DIRECTORY_LZO := $(DEPENDENCY_BUILD_DIRECTORY)/lzo
 DEPENDENCY_BUILD_DIRECTORY_LZ4 := $(DEPENDENCY_BUILD_DIRECTORY)/lz4
 DEPENDENCY_BUILD_DIRECTORY_ZSTD := $(DEPENDENCY_BUILD_DIRECTORY)/zstd
 
-EXTLIBS += $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libz.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/liblzma.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/liblzo2.a $(DEPENDENCY_SOURCE_DIRECTORY_LZ4)/lib/liblz4.a $(DEPENDENCY_SOURCE_DIRECTORY_ZSTD)/lib/libzstd.a
+EXTLIBS += $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libz.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/liblzo2.a $(DEPENDENCY_SOURCE_DIRECTORY_LZ4)/lib/liblz4.a $(DEPENDENCY_SOURCE_DIRECTORY_ZSTD)/lib/libzstd.a
 SOURCES += $(EXTLIBS)
 OBJECTS += $(EXTLIBS)
 LDLIBS += $(EXTLIBS)
@@ -89,29 +78,6 @@ $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libz.a: | $(DEPENDENCY_SOURCE_DIRECTORY_ZLIB)
 	$(DEPENDENCY_SOURCE_DIRECTORY_ZLIB)/configure \
 		--prefix="$(DEPENDENCY_OUTPUT_DIRECTORY)" \
 		--static \
-	&& \
-	$(MAKE) && \
-	$(MAKE) install
-
-$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/liblzma.a: | $(DEPENDENCY_SOURCE_DIRECTORY_XZ) $(DEPENDENCY_OUTPUT_DIRECTORY)
-	mkdir -p $(DEPENDENCY_BUILD_DIRECTORY_XZ) && \
-	cd $(DEPENDENCY_BUILD_DIRECTORY_XZ) && \
-	PKG_CONFIG_PATH=$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/pkgconfig \
-	$(DEPENDENCY_SOURCE_DIRECTORY_XZ)/configure \
-		CFLAGS="-O2" \
-		--prefix="$(DEPENDENCY_OUTPUT_DIRECTORY)" \
-		--enable-threads=no \
-		--enable-unaligned-access=no \
-		--disable-xz \
-		--disable-xzdec \
-		--disable-lzmadec \
-		--disable-lzmainfo \
-		--disable-lzma-links \
-		--disable-scripts \
-		--disable-doc \
-		--enable-shared=no \
-		--enable-static=yes \
-		--host=$(patsubst %-,%,$(TOOL_TRIPLET_PREFIX)) \
 	&& \
 	$(MAKE) && \
 	$(MAKE) install
