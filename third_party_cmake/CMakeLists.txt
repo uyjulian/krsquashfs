@@ -40,6 +40,7 @@ endif()
 include(ExternalProject)
 ExternalProject_Add(zlib-build
     URL https://github.com/madler/zlib/archive/refs/tags/v1.2.12.tar.gz
+    URL_HASH SHA256=d8688496ea40fb61787500e863cc63c9afcbc524468cedeb478068924eb54932
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env
 		"PKG_CONFIG_PATH=${DEPENDENCY_OUTPUT_DIRECTORY}/lib/pkgconfig"
@@ -57,6 +58,7 @@ list(APPEND THIRDPARTY_DEPENDS zlib-build)
 string(REGEX REPLACE "-$" "" TOOL_TRIPLET_PREFIX_NOTRAILINGDASH "${TOOL_TRIPLET_PREFIX}")
 ExternalProject_Add(lzo-build
     URL https://www.oberhumer.com/opensource/lzo/download/lzo-2.10.tar.gz
+    URL_HASH SHA256=c0f892943208266f9b6543b3ae308fab6284c5c90e627931446fb49b4221a072
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env
 		"PKG_CONFIG_PATH=${DEPENDENCY_OUTPUT_DIRECTORY}/lib/pkgconfig"
@@ -74,6 +76,7 @@ list(APPEND THIRDPARTY_DEPENDS lzo-build)
 
 ExternalProject_Add(lz4-build
     URL https://github.com/lz4/lz4/archive/refs/tags/v1.9.4.tar.gz
+    URL_HASH SHA256=0b0e3aa07c8c063ddf40b082bdf7e37a1562bda40a0ff5272957f3e987e0e54b
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     BUILD_IN_SOURCE TRUE
     CONFIGURE_COMMAND ""
@@ -85,6 +88,7 @@ list(APPEND THIRDPARTY_DEPENDS lz4-build)
 
 ExternalProject_Add(zstd-build
     URL https://github.com/facebook/zstd/releases/download/v1.5.2/zstd-1.5.2.tar.gz
+    URL_HASH SHA256=7c42d56fac126929a6a85dbc73ff1db2411d04f104fae9bdea51305663a83fd0
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     BUILD_IN_SOURCE TRUE
     CONFIGURE_COMMAND ""
