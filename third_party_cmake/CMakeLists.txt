@@ -1,0 +1,121 @@
+# Copyright (c) third_party_cmake developers
+
+cmake_minimum_required(VERSION 3.0)
+project(third_party_cmake)
+
+if((NOT DEFINED CMAKE_BUILD_TYPE) OR (NOT CMAKE_BUILD_TYPE) OR (CMAKE_BUILD_TYPE STREQUAL ""))
+set(CMAKE_BUILD_TYPE RelWithDebInfo)
+endif()
+
+set(DEPENDENCY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/build-libraries)
+file(MAKE_DIRECTORY ${DEPENDENCY_OUTPUT_DIRECTORY}/include)
+
+if((NOT DEFINED MAKE_JOB_ARG) OR (NOT MAKE_JOB_ARG) OR (MAKE_JOB_ARG STREQUAL ""))
+include(ProcessorCount)
+ProcessorCount(MAKE_JOB_NUM)
+set(MAKE_JOB_ARG -j1)
+if(NOT MAKE_JOB_NUM EQUAL 0)
+set(MAKE_JOB_ARG -j${MAKE_JOB_NUM})
+endif()
+endif()
+
+if(NOT DEFINED TOOL_TRIPLET_PREFIX)
+if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL i686)
+set(TOOL_TRIPLET_PREFIX i686-w64-mingw32-)
+endif()
+if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL amd64)
+set(TOOL_TRIPLET_PREFIX x86_64-w64-mingw32-)
+endif()
+if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL arm)
+set(TOOL_TRIPLET_PREFIX armv7-w64-mingw32-)
+endif()
+if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL arm64)
+set(TOOL_TRIPLET_PREFIX aarch64-w64-mingw32-)
+endif()
+if(NOT DEFINED TOOL_TRIPLET_PREFIX)
+set(TOOL_TRIPLET_PREFIX i686-w64-mingw32-)
+endif()
+endif()
+
+include(ExternalProject)
+ExternalProject_Add(zlib-build
+    URL https://github.com/madler/zlib/archive/refs/tags/v1.2.12.tar.gz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env
+		"PKG_CONFIG_PATH=${DEPENDENCY_OUTPUT_DIRECTORY}/lib/pkgconfig"
+		CFLAGS=-O2
+		"CROSS_PREFIX=${TOOL_TRIPLET_PREFIX}"
+		<SOURCE_DIR>/configure
+			"--prefix=${DEPENDENCY_OUTPUT_DIRECTORY}"
+			--static
+    BUILD_COMMAND make -C <BINARY_DIR> ${MAKE_JOB_ARG} && make -C <BINARY_DIR> ${MAKE_JOB_ARG} install
+    BUILD_BYPRODUCTS ${DEPENDENCY_OUTPUT_DIRECTORY}/lib/libz.a
+    INSTALL_COMMAND ""
+)
+list(APPEND THIRDPARTY_DEPENDS zlib-build)
+
+string(REGEX REPLACE "-$" "" TOOL_TRIPLET_PREFIX_NOTRAILINGDASH "${TOOL_TRIPLET_PREFIX}")
+ExternalProject_Add(lzo-build
+    URL https://www.oberhumer.com/opensource/lzo/download/lzo-2.10.tar.gz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env
+		"PKG_CONFIG_PATH=${DEPENDENCY_OUTPUT_DIRECTORY}/lib/pkgconfig"
+		<SOURCE_DIR>/configure
+			CFLAGS=-O2
+			"--prefix=${DEPENDENCY_OUTPUT_DIRECTORY}"
+			--enable-shared=no
+			--enable-static=yes
+			--host=${TOOL_TRIPLET_PREFIX_NOTRAILINGDASH}
+    BUILD_COMMAND make -C <BINARY_DIR> ${MAKE_JOB_ARG} && make -C <BINARY_DIR> ${MAKE_JOB_ARG} install
+    BUILD_BYPRODUCTS ${DEPENDENCY_OUTPUT_DIRECTORY}/lib/liblzo2.a
+    INSTALL_COMMAND ""
+)
+list(APPEND THIRDPARTY_DEPENDS lzo-build)
+
+ExternalProject_Add(lz4-build
+    URL https://github.com/lz4/lz4/archive/refs/tags/v1.9.4.tar.gz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    BUILD_IN_SOURCE TRUE
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND make -C <SOURCE_DIR>/lib ${MAKE_JOB_ARG} CC=${CMAKE_C_COMPILER} AR=${CMAKE_AR} LD=${CMAKE_C_COMPILER} WINDRES=${CMAKE_RC_COMPILER} TARGET_OS=Windows CFLAGS=-O2 TARGET_ARCH= BUILD_SHARED=NO PREFIX=${DEPENDENCY_OUTPUT_DIRECTORY} install
+    BUILD_BYPRODUCTS ${DEPENDENCY_OUTPUT_DIRECTORY}/lib/liblz4.a
+    INSTALL_COMMAND ""
+)
+list(APPEND THIRDPARTY_DEPENDS lz4-build)
+
+ExternalProject_Add(zstd-build
+    URL https://github.com/facebook/zstd/releases/download/v1.5.2/zstd-1.5.2.tar.gz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    BUILD_IN_SOURCE TRUE
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND make -C <SOURCE_DIR>/lib ${MAKE_JOB_ARG} CC=${CMAKE_C_COMPILER} AR=${CMAKE_AR} LD=${CMAKE_C_COMPILER} WINDRES=${CMAKE_RC_COMPILER} TARGET_OS=Windows TARGET_SYSTEM=Windows_NT CFLAGS=-O2 TARGET_ARCH= BUILD_SHARED=NO PREFIX=${DEPENDENCY_OUTPUT_DIRECTORY} install
+    BUILD_BYPRODUCTS ${DEPENDENCY_OUTPUT_DIRECTORY}/lib/libzstd.a
+    INSTALL_COMMAND ""
+)
+list(APPEND THIRDPARTY_DEPENDS zstd-build)
+
+foreach(CUR_DEPEND IN LISTS THIRDPARTY_DEPENDS)
+ExternalProject_Get_Property(${CUR_DEPEND} BUILD_BYPRODUCTS)
+list(APPEND THIRDPARTY_LIBRARIES ${BUILD_BYPRODUCTS})
+endforeach()
+
+add_custom_command(
+    OUTPUT ${DEPENDENCY_OUTPUT_DIRECTORY}/lib/libthird_party_cmake.a
+    COMMAND 
+    	printf 'create %s\\n' ${DEPENDENCY_OUTPUT_DIRECTORY}/lib/libthird_party_cmake.a > ${DEPENDENCY_OUTPUT_DIRECTORY}/build.mri &&
+    	printf 'addlib %s\\n' ${THIRDPARTY_LIBRARIES} >> ${DEPENDENCY_OUTPUT_DIRECTORY}/build.mri &&
+    	printf 'save\\nend\\n' >> ${DEPENDENCY_OUTPUT_DIRECTORY}/build.mri &&
+    	cat ${DEPENDENCY_OUTPUT_DIRECTORY}/build.mri | ${CMAKE_AR} -M
+    DEPENDS ${THIRDPARTY_DEPENDS}
+)
+
+add_custom_command(
+	OUTPUT ${DEPENDENCY_OUTPUT_DIRECTORY}/include/third_party_cmake.h
+	COMMAND touch ${DEPENDENCY_OUTPUT_DIRECTORY}/include/third_party_cmake.h
+	DEPENDS ${DEPENDENCY_OUTPUT_DIRECTORY}/lib/libthird_party_cmake.a
+)
+
+add_custom_target(main_output_target
+	ALL
+	DEPENDS ${DEPENDENCY_OUTPUT_DIRECTORY}/lib/libthird_party_cmake.a ${DEPENDENCY_OUTPUT_DIRECTORY}/include/third_party_cmake.h
+)
